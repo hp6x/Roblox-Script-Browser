@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Roblox Version Tracker</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@500;700;800;900&display=swap');
+
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      cursor: default !important;
+    }
+
+    html, body {
+      overflow: hidden !important; /* host owns scrollbar */
+      margin: 0;
+      padding: 0;
+      height: auto;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: transparent;
+      color: #e5e7eb;
+      padding: 2rem 0;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 1rem;
+    }
+
+    /* Header Section */
+    .header { display: none; }
+
+    .header-title {
+      font-size: 2.5rem;
+      font-weight: 900;
+      color: #ffffff;
+      text-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
+      margin-bottom: 0.5rem;
+      letter-spacing: -0.02em;
+    }
+
+    .header-subtitle {
+      font-size: 1rem;
+      color: #a1a1aa;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+
+    /* Loading State */
+    .loading-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 4rem 2rem;
+      animation: fadeIn 0.4s ease-out;
+    }
+
+    .loading-spinner {
+      width: 50px;
+      height: 50px;
+      border: 4px solid rgba(168, 85, 247, 0.2);
+      border-top-color: #a855f7;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 1.5rem;
+    }
+
+    .loading-text {
+      font-size: 1.1rem;
+      color: #9ca3af;
+      font-weight: 700;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Channel Sections */
+    .channel-section {
+      margin-bottom: 3rem;
+      animation: fadeInUp 0.6s ease-out backwards;
+    }
+
+    .channel-section:nth-child(1) { animation-delay: 0.1s; }
+    .channel-section:nth-child(2) { animation-delay: 0.2s; }
+    .channel-section:nth-child(3) { animation-delay: 0.3s; }
+
+    .channel-header { display: none; }
+
+    .channel-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    .channel-icon.current {
+      background: linear-gradient(135deg, #10b981, #34d399);
+    }
+
+    .channel-icon.future {
+      background: linear-gradient(135deg, #3b82f6, #60a5fa);
+    }
+
+    .channel-icon.past {
+      background: linear-gradient(135deg, #f59e0b, #fbbf24);
+    }
+
+    .channel-title-wrapper {
+      flex: 1;
+    }
+
+    .channel-title {
+      font-size: 1.4rem;
+      font-weight: 900;
+      color: #ffffff;
+      text-shadow: 0 1px 6px rgba(0, 0, 0, 0.4);
+      margin-bottom: 0.25rem;
+      letter-spacing: 0.01em;
+    }
+
+    .channel-description {
+      font-size: 0.85rem;
+      color: #a1a1aa;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+
+    .status-badge, .status-indicator { display: none; }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    /* Modern row list (match software card theme) */
+    .version-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .version-item {
+      display: grid;
+      grid-template-columns: 170px auto 220px 190px 64px; /* Platform | Version | Time | Revert | Copy */
+      align-items: center;
+      background: linear-gradient(135deg, rgba(20, 20, 32, 0.45), rgba(30, 30, 42, 0.35));
+      backdrop-filter: blur(24px) saturate(1.3);
+      border-radius: 20px;
+      border: 1px solid rgba(100, 100, 140, 0.25);
+      padding: 0.75rem 1rem;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255,255,255,0.06);
+      transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease, background .25s ease;
+    }
+
+    .version-item:hover {
+      transform: translateY(-4px);
+      border-color: rgba(120, 120, 160, 0.35);
+      background: linear-gradient(135deg, rgba(24, 24, 40, 0.5), rgba(34, 34, 52, 0.42));
+      box-shadow: 0 16px 48px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255,255,255,0.08);
+    }
+
+    .platform-name {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      min-width: 0;
+    }
+
+    .platform-icon {
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #cbd5e1;
+    }
+
+    .platform-icon svg { width: 100%; height: 100%; fill: currentColor; }
+
+    .platform-title { font-size: 0.95rem; font-weight: 900; color: #ffffff; letter-spacing: .01em; }
+    .version-item:hover .platform-title { color: #ffffff; }
+
+    /* Row action buttons */
+    .copy-btn {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      background: transparent;
+      border: 1px solid rgba(100, 100, 140, 0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s ease;
+      cursor: default;
+      color: #ffffff; /* default icon/text white */
+    }
+    .copy-btn:hover {
+      background: linear-gradient(135deg, #a855f7, #9333ea);
+      border-color: #a855f7;
+      transform: scale(1.08);
+      color: #000000; /* hover icon/text black */
+    }
+
+    .copy-btn svg {
+      width: 16px;
+      height: 16px;
+      stroke: currentColor;
+    }
+
+    .open-text-btn {
+      padding: 0.6rem 0.8rem;
+      border-radius: 12px;
+      border: 1px solid rgba(120, 120, 160, 0.35);
+      background: rgba(20, 20, 35, 0.3);
+      color: #e5e7eb;
+      font-weight: 800;
+      cursor: default;
+      transition: all 0.3s ease;
+      text-align: center;
+      white-space: nowrap;
+    }
+    .open-text-btn:hover { background: linear-gradient(135deg, #a855f7, #9333ea); border-color: #a855f7; color: #000000; transform: translateY(-2px); }
+
+    .version-value {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: #f0f4f8;
+      word-break: break-all;
+      font-family: 'Courier New', monospace;
+      background: rgba(168, 85, 247, 0.1);
+      padding: 0.4rem 0.6rem;
+      border-radius: 8px;
+      border: 1px solid rgba(168, 85, 247, 0.2);
+      width: max-content; max-width: 100%;
+    }
+
+    .date-info {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      justify-content: flex-start;
+    }
+
+    .date-icon {
+      width: 16px;
+      height: 16px;
+      color: #a1a1aa;
+    }
+
+    .date-text {
+      font-size: 0.8rem;
+      color: #cbd5e1;
+      font-weight: 600;
+    }
+
+    .btn-placeholder { width: 36px; height: 36px; }
+
+    /* Error State */
+    .error-container {
+      text-align: center;
+      padding: 4rem 2rem;
+      animation: fadeIn 0.4s ease-out;
+    }
+
+    .error-icon {
+      font-size: 4rem;
+      margin-bottom: 1.5rem;
+      opacity: 0.5;
+    }
+
+    .error-title {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: #ef4444;
+      margin-bottom: 0.5rem;
+    }
+
+    .error-message {
+      font-size: 0.95rem;
+      color: #9ca3af;
+      font-weight: 600;
+    }
+
+    .retry-btn {
+      margin-top: 1.5rem;
+      padding: 0.75rem 1.5rem;
+      background: linear-gradient(135deg, #a855f7, #9333ea);
+      border: none;
+      border-radius: 12px;
+      color: #ffffff;
+      font-weight: 800;
+      font-size: 0.9rem;
+      transition: all 0.3s ease;
+      cursor: default;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .retry-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(168, 85, 247, 0.4);
+    }
+
+    /* Animations */
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      body {
+        padding: 1rem 0;
+      }
+
+      .header-title {
+        font-size: 1.8rem;
+      }
+
+      .version-item {
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+      }
+
+      .channel-title {
+        font-size: 1.2rem;
+      }
+    }
+
+    /* Toolbar + revert button (neutral, theme-matching) */
+    .toolbar { display: none; }
+    .revert-btn {
+      padding: 0.6rem 0.9rem;
+      border-radius: 12px;
+      border: 1px solid rgba(120, 120, 160, 0.35);
+      background: rgba(20, 20, 35, 0.3);
+      color: #e5e7eb;
+      font-weight: 800;
+      cursor: default;
+      transition: all 0.3s ease;
+    }
+    .revert-btn:hover { background: rgba(168, 85, 247, 0.1); border-color: #a855f7; transform: translateY(-2px); }
+
+    /* Modern section title */
+    .section-title {
+      margin: 1.25rem 0 .5rem;
+      font-size: 0.95rem; font-weight: 900; letter-spacing: .08em; text-transform: uppercase;
+      color: #cbd5e1;
+      position: relative; padding-left: 10px;
+    }
+    .section-title::before {
+      content: '';
+      position: absolute; left: 0; top: 50%; transform: translateY(-50%);
+      width: 4px; height: 14px; border-radius: 2px;
+      background: linear-gradient(180deg, #a855f7, #6366f1);
+      box-shadow: 0 0 12px rgba(168,85,247,.45);
+    }
+
+    /* Green blinking dot for current rows */
+    .live-dot {
+      width: 8px; height: 8px; border-radius: 50%; background: #10b981; box-shadow: 0 0 8px rgba(16,185,129,.65);
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    /* removed top summary card */
+
+    /* Copy notification */
+    .copy-notification {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: linear-gradient(135deg, #10b981, #34d399);
+      color: #000000;
+      padding: 1rem 1.5rem;
+      border-radius: 12px;
+      font-weight: 800;
+      font-size: 0.9rem;
+      box-shadow: 0 8px 24px rgba(16, 185, 129, 0.4);
+      z-index: 1000;
+      animation: slideInRight 0.3s ease-out, slideOutRight 0.3s ease-in 2.7s forwards;
+      pointer-events: none;
+    }
+
+    @keyframes slideInRight {
+      from {
+        opacity: 0;
+        transform: translateX(100%);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    @keyframes slideOutRight {
+      from {
+        opacity: 1;
+        transform: translateX(0);
+      }
+      to {
+        opacity: 0;
+        transform: translateX(100%);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1 class="header-title">🎮 Roblox Version Tracker</h1>
+      <p class="header-subtitle">Real-time version tracking across all platforms</p>
+      <button class="revert-btn" onclick="window.open('https://rdd.weao.gg', '_blank')">Revert to previous Windows version</button>
+    </div>
+
+    <div class="toolbar">
+      <button class="revert-btn" onclick="window.open('https://rdd.weao.gg', '_blank')">Revert to older version</button>
+    </div>
+
+    <div id="content"></div>
+  </div>
+
+  <script>
+    const BASE_API = 'https://weao.gg';
+
+    const PLATFORM_ICONS = {
+      Windows: '<svg viewBox="0 0 24 24"><path d="M3 5.5l8-1.2V11H3V5.5zm0 13V13h8v6.7l-8-1.2zM13 4l8-1v8h-8V4zm0 16v-8h8v8l-8-1z"/></svg>',
+      Mac: '<svg viewBox="0 0 24 24"><path d="M16.36 1.64a4.08 4.08 0 0 1-1.14 2.9A3.72 3.72 0 0 1 12.6 6a3.9 3.9 0 0 1 1.13-2.86A4.3 4.3 0 0 1 16.36 1.64zM20.5 17.68c-.36.85-.8 1.63-1.31 2.34-.69.97-1.25 1.64-1.69 2a3.64 3.64 0 0 1-2.22.85c-.55 0-1.21-.16-1.97-.49-.76-.33-1.46-.49-2.1-.49-.67 0-1.39.16-2.17.49-.77.33-1.4.5-1.89.5-.79.04-1.56-.27-2.3-.94-.49-.43-1.07-1.1-1.75-2.01A12.6 12.6 0 0 1 2 13.9c0-1.64.36-3.06 1.07-4.25a6.2 6.2 0 0 1 2.22-2.3 5.86 5.86 0 0 1 3.01-.87c.59 0 1.36.18 2.31.53.95.36 1.56.53 1.83.53.2 0 .83-.21 1.9-.62.99-.36 1.83-.5 2.54-.44 1.88.15 3.29.91 4.23 2.27-1.68 1.02-2.52 2.46-2.52 4.3 0 1.43.54 2.62 1.6 3.56-.13.36-.27.7-.42 1.01z"/></svg>',
+      Android: '<svg viewBox="0 0 24 24"><path d="M17.6 9l1.4-2.4-.9-.5-1.4 2.4a6.9 6.9 0 0 0-7.5 0L7.8 6.1l-.9.5L8.3 9A5.5 5.5 0 0 0 7 12v5a1 1 0 0 0 1 1h1v3h2v-3h2v3h2v-3h1a1 1 0 0 0 1-1v-5c0-1.2-.5-2.3-1.4-3zM6 10H4v6h2v-6zm14 0h-2v6h2v-6z"/></svg>',
+      iOS: '<svg viewBox="0 0 24 24"><path d="M16.36 1.64a4.08 4.08 0 0 1-1.14 2.9A3.72 3.72 0 0 1 12.6 6a3.9 3.9 0 0 1 1.13-2.86A4.3 4.3 0 0 1 16.36 1.64zM20.5 17.68c-.36.85-.8 1.63-1.31 2.34-.69.97-1.25 1.64-1.69 2a3.64 3.64 0 0 1-2.22.85c-.55 0-1.21-.16-1.97-.49-.76-.33-1.46-.49-2.1-.49-.67 0-1.39.16-2.17.49-.77.33-1.4.5-1.89.5-.79.04-1.56-.27-2.3-.94-.49-.43-1.07-1.1-1.75-2.01A12.6 12.6 0 0 1 2 13.9c0-1.64.36-3.06 1.07-4.25a6.2 6.2 0 0 1 2.22-2.3 5.86 5.86 0 0 1 3.01-.87c.59 0 1.36.18 2.31.53.95.36 1.56.53 1.83.53.2 0 .83-.21 1.9-.62.99-.36 1.83-.5 2.54-.44 1.88.15 3.29.91 4.23 2.27-1.68 1.02-2.52 2.46-2.52 4.3 0 1.43.54 2.62 1.6 3.56-.13.36-.27.7-.42 1.01z"/></svg>'
+    };
+
+    let allData = {};
+    const CACHE_TTL = { current: 15 * 60 * 1000, future: 60 * 60 * 1000, past: 60 * 60 * 1000 };
+    const CACHE_KEYS = { current: 'weao_versions_current', future: 'weao_versions_future', past: 'weao_versions_past' };
+
+    function showLoading() {
+      document.getElementById('content').innerHTML = `
+        <div class="loading-container">
+          <div class="loading-spinner"></div>
+          <div class="loading-text">Fetching version data from WEAO API...</div>
+        </div>
+      `;
+    }
+
+    function showError(message) {
+      document.getElementById('content').innerHTML = `
+        <div class="error-container">
+          <div class="error-icon">⚠️</div>
+          <h3 class="error-title">Unable to Load Data</h3>
+          <p class="error-message">${message}</p>
+          <button class="retry-btn" onclick="init()">Retry</button>
+        </div>
+      `;
+    }
+
+    async function fetchVersionData(endpoint) {
+      try {
+        const url = `${BASE_API}/api/versions/${endpoint}`;
+        const r = await fetch(url, {
+          headers: {
+            'Accept': 'application/json'
+          }
+        });
+        if (!r.ok) return null;
+        return await r.json();
+      } catch (_) {
+        return null;
+      }
+    }
+
+    function readCache(key) {
+      try {
+        const raw = localStorage.getItem(CACHE_KEYS[key]);
+        if (!raw) return null;
+        const obj = JSON.parse(raw);
+        if (!obj || typeof obj !== 'object') return null;
+        if (Date.now() - (obj.ts || 0) > (CACHE_TTL[key] || 0)) return null;
+        return obj.data || null;
+      } catch (_) { return null; }
+    }
+
+    function writeCache(key, data) {
+      try { localStorage.setItem(CACHE_KEYS[key], JSON.stringify({ ts: Date.now(), data })); } catch (_) {}
+    }
+
+    async function fetchAllData() {
+      // 1) Render cached immediately
+      const cachedCurrent = readCache('current');
+      const cachedFuture = readCache('future');
+      const cachedPast = readCache('past');
+      allData = { current: cachedCurrent, future: cachedFuture, past: cachedPast };
+      if (cachedCurrent || cachedFuture || cachedPast) {
+        renderData();
+      } else {
+        showLoading();
+      }
+
+      // 2) Start background fetches in parallel, progressively render as they return
+      const updateSection = async (key) => {
+        const data = await fetchVersionData(key);
+        if (data) {
+          allData[key] = data;
+          writeCache(key, data);
+          renderData();
+        }
+      };
+      updateSection('current');
+      updateSection('future');
+      updateSection('past');
+
+      // 3) If nothing resolved in 3s and no cache, show error
+      setTimeout(() => {
+        if (!allData.current && !allData.future && !allData.past) {
+          showError('The API is currently unavailable. Please try again later.');
+        }
+      }, 3000);
+    }
+
+    // Periodic silent refresh
+    function scheduleRefresh() {
+      clearInterval(window._weaoRefresh);
+      window._weaoRefresh = setInterval(() => {
+        ['current','future','past'].forEach(async key => {
+          const data = await fetchVersionData(key);
+          if (data) {
+            const prev = JSON.stringify(allData[key] || {});
+            const next = JSON.stringify(data);
+            if (prev !== next) {
+              allData[key] = data;
+              writeCache(key, data);
+              renderData();
+            }
+          }
+        });
+      }, 5 * 60 * 1000);
+    }
+
+    function formatDate(dateStr) {
+      if (!dateStr) return 'N/A';
+      try {
+        const date = new Date(dateStr);
+        return date.toLocaleDateString('en-US', { 
+          month: 'short', 
+          day: 'numeric', 
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+      } catch (_) {
+        return dateStr;
+      }
+    }
+
+    function timeAgo(dateStr) {
+      try {
+        const then = new Date(dateStr).getTime();
+        const now = Date.now();
+        const diff = Math.max(0, now - then);
+        const s = Math.floor(diff / 1000);
+        const m = Math.floor(s / 60);
+        const h = Math.floor(m / 60);
+        const d = Math.floor(h / 24);
+        if (d > 0) return `${d}d ago`;
+        if (h > 0) return `${h}h ago`;
+        if (m > 0) return `${m}m ago`;
+        return 'just now';
+      } catch (_) { return ''; }
+    }
+
+    function copyToClipboard(text, platform) {
+      try {
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+        
+        showCopyNotification(platform);
+      } catch (err) {
+        console.error('Copy failed:', err);
+      }
+    }
+
+    function showCopyNotification(platform) {
+      const notification = document.createElement('div');
+      notification.className = 'copy-notification';
+      notification.textContent = `✓ ${platform} version copied!`;
+      document.body.appendChild(notification);
+      
+      setTimeout(() => {
+        notification.remove();
+      }, 3000);
+    }
+
+    function createPlatformRow(platform, version, date, channelKey) {
+      if (!version || version === 'N/A') return '';
+      
+      const rel = timeAgo(date) || '';
+
+      return `
+        <div class="version-item">
+          <div class="platform-name">
+            <div class="platform-icon">${PLATFORM_ICONS[platform] || ''}</div>
+            <h3 class="platform-title">${platform}</h3>
+            ${channelKey === 'current' ? '<span class="live-dot"></span>' : ''}
+          </div>
+          <div class="version-value">${version}</div>
+          <div class="date-info">
+            <svg class="date-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+            <span class="date-text" title="${formatDate(date)}">${rel || formatDate(date)}</span>
+          </div>
+          ${(channelKey === 'current' && platform === 'Windows')
+            ? `<button class="open-text-btn" onclick="window.open('https://rdd.weao.gg/?channel=LIVE&binaryType=WindowsPlayer&version=version-8e6e698468a04d3f', '_blank')">Revert To Old Verison</button>`
+            : '<div class="btn-placeholder"></div>'}
+          <button class="copy-btn" onclick="copyToClipboard('${version}', '${platform}')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+            </svg>
+          </button>
+        </div>
+      `;
+    }
+
+    function createChannelSection(title, icon, description, data, gradient, key) {
+      if (!data) return '';
+      
+      const platforms = ['Windows', 'Mac', 'Android', 'iOS'];
+      let cards = '';
+      
+      platforms.forEach(platform => {
+        const version = data[platform];
+        const date = data[`${platform}Date`];
+        if (version) {
+          cards += createPlatformRow(platform, version, date, key);
+        }
+      });
+
+      if (!cards) return '';
+
+      return `
+        <div class="channel-section">
+          <div class="section-title">${title}</div>
+          <div class="version-list">
+            ${cards}
+          </div>
+        </div>
+      `;
+    }
+
+    function renderData() {
+      const content = document.getElementById('content');
+      
+      let html = '';
+      
+      html += createChannelSection(
+        'Current Versions',
+        '✅',
+        'Latest stable versions deployed across all platforms',
+        allData.current,
+        'current',
+        'current'
+      );
+      
+      html += createChannelSection(
+        'Future Versions',
+        '🚀',
+        'Upcoming versions in testing phase',
+        allData.future,
+        'future',
+        'future'
+      );
+      
+      html += createChannelSection(
+        'Past Versions',
+        '📦',
+        'Previous versions for downgrading purposes',
+        allData.past,
+        'past',
+        'past'
+      );
+
+      content.innerHTML = html || '<div class="error-container"><div class="error-icon">📭</div><h3 class="error-title">No Data Available</h3></div>';
+      
+      setTimeout(postHeight, 100);
+    }
+
+    // summary removed per request
+
+    function postHeight() {
+      try {
+        const h = Math.max(
+          document.body.scrollHeight,
+          document.documentElement.scrollHeight
+        );
+        parent && parent.postMessage({ type: 'analyticsHeight', height: h }, '*');
+      } catch (_) {}
+    }
+
+    function init() {
+      fetchAllData();
+      scheduleRefresh();
+    }
+
+    window.addEventListener('load', () => { postHeight(); });
+    window.addEventListener('resize', () => {
+      clearTimeout(window._resizeTimeout);
+      window._resizeTimeout = setTimeout(postHeight, 100);
+    });
+
+    document.addEventListener('copy', e => e.preventDefault());
+    document.addEventListener('contextmenu', e => e.preventDefault());
+
+    init();
+  </script>
+</body>
+</html>

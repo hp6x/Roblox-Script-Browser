@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Executor Showcase</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+
+    /* Only local scope resets to avoid theme clashes */
+    * { box-sizing: border-box; cursor: default !important; }
+    html, body { overflow: hidden !important; }
+    body { scrollbar-width: none; -ms-overflow-style: none; }
+    body::-webkit-scrollbar { display: none; width: 0; height: 0; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: transparent; /* match host theme */
+      color: #e5e7eb;
+      min-height: auto;
+      padding: 0; /* host will control spacing */
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 1rem; /* light internal spacing */
+    }
+
+    .header { display: none; }
+
+    /* Scripts-like search */
+    .search-wrapper {
+      position: relative;
+      background: rgba(20, 20, 35, 0.4);
+      backdrop-filter: blur(20px);
+      border-radius: 12px;
+      border: 1px solid rgba(80, 80, 100, 0.25);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+      overflow: hidden;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      width: 100%;
+      margin: 0 0 1rem;
+    }
+    .search-wrapper:hover { border-color: rgba(168,85,247,0.4); box-shadow: 0 8px 24px rgba(0,0,0,0.4); transform: translateY(-2px); }
+    .search-icon { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: #a855f7; }
+    #search-input {
+      width: 100%;
+      padding: 0.95rem 1.25rem 0.95rem 2.75rem;
+      background: transparent; border: none; outline: none;
+      color: #e5e7eb; font-size: 1rem; font-weight: 600;
+    }
+    #search-input::placeholder { color: #71717a; }
+
+    .filters-row {
+      display: flex; justify-content: flex-end; gap: 0.75rem; max-width: 1200px; margin: 0 auto 1rem;
+      position: relative; z-index: 200000;
+    }
+    .select-wrapper { position: relative; display: inline-flex; width: 140px; overflow: visible; }
+    .select-wrapper select {
+      width: 100%; height: 42px; padding: 0 1.75rem 0 0.75rem;
+      background: rgba(20, 20, 35, 0.4); backdrop-filter: blur(20px);
+      border: 1px solid rgba(80, 80, 100, 0.25); border-radius: 12px;
+      color: #e5e7eb; font-weight: 600; outline: none; transition: all .3s ease;
+      appearance: none; -webkit-appearance: none; -moz-appearance: none;
+    }
+    .select-wrapper::after { content: ''; position: absolute; right: 12px; top: 50%; transform: translateY(-50%) rotate(45deg); width: 8px; height: 8px; border-right: 2px solid #a1a1aa; border-bottom: 2px solid #a1a1aa; pointer-events: none; opacity: .7; }
+    .select-wrapper:hover { transform: translateY(-2px); }
+    .select-wrapper:hover select { border-color: rgba(168,85,247,0.4); box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
+    /* Modern trigger to replace native select */
+    .modern-select-trigger {
+      width: 100%; height: 40px; padding: 0 1.75rem 0 0.75rem;
+      background: rgba(20, 20, 35, 0.45); backdrop-filter: blur(18px);
+      border: 1px solid rgba(82, 82, 103, 0.35); border-radius: 999px;
+      color: #e5e7eb; font-weight: 700; display: inline-flex; align-items: center;
+      justify-content: space-between; gap: .5rem; cursor: default; user-select: none;
+      transition: all .25s ease; position: relative; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .modern-select-trigger:hover { border-color: rgba(168,85,247,0.4); box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
+    .modern-caret { position: absolute; right: 12px; width: 8px; height: 8px; border-right: 2px solid #a1a1aa; border-bottom: 2px solid #a1a1aa; transform: rotate(45deg); opacity: .7; }
+    .select-hidden { display: none !important; }
+
+    .modern-select-menu {
+      position: absolute;
+      top: calc(100% + 8px);
+      right: 0;
+      padding: 6px;
+      border-radius: 14px;
+      background: rgba(25, 25, 35, 0.95);
+      border: 1px solid rgba(80, 80, 100, 0.35);
+      backdrop-filter: blur(20px);
+      box-shadow: 0 16px 48px rgba(0,0,0,0.55);
+      z-index: 300000;
+      display: none;
+      max-height: 360px;
+      overflow: auto;
+      min-width: 180px;
+      width: max-content;
+    }
+    .modern-select-menu.open { display: block; animation: slideDown 0.18s ease-out; }
+
+    .modern-option {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 12px; color: #e4e4e7; border-radius: 10px; font-weight: 700;
+      cursor: default; transition: all 0.2s ease; white-space: nowrap;
+    }
+    .modern-option:hover { background: rgba(168,85,247,0.15); transform: translateY(-2px); }
+    .modern-option.active { background: rgba(168,85,247,0.22); }
+    .modern-option.active::after { content: '✔'; font-size: 12px; opacity: .9; }
+
+    .filter-tabs {
+      display: flex;
+      gap: 0.75rem;
+      margin-bottom: 2rem;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .filter-tab {
+      padding: 0.65rem 1.25rem;
+      background: rgba(30, 30, 46, 0.4);
+      border: 1px solid rgba(100, 100, 140, 0.3);
+      border-radius: 10px;
+      color: #e5e7eb;
+      font-weight: 700;
+      font-size: 0.85rem;
+      cursor: default;
+      transition: all 0.3s ease;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .filter-tab:hover {
+      border-color: #a855f7;
+      background: rgba(168, 85, 247, 0.1);
+    }
+
+    .filter-tab.active {
+      background: linear-gradient(135deg, #a855f7, #9333ea);
+      border-color: #a855f7;
+      color: #fff;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 3rem;
+      font-size: 1.2rem;
+      color: #9ca3af;
+    }
+
+    .loading-spinner {
+      width: 50px;
+      height: 50px;
+      border: 4px solid rgba(168, 85, 247, 0.2);
+      border-top-color: #a855f7;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 1rem;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.25rem; margin-bottom: 1.5rem; }
+
+    .card {
+      background: linear-gradient(135deg, rgba(20, 20, 32, 0.45), rgba(30, 30, 42, 0.35));
+      backdrop-filter: blur(24px) saturate(1.3);
+      border-radius: 20px;
+      border: 1px solid rgba(100, 100, 140, 0.25);
+      overflow: hidden;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255,255,255,0.06);
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      padding: 1.25rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    .card::before { content: none; }
+
+    .card:hover {
+      transform: translateY(-6px) scale(1.005);
+      border-color: rgba(120, 120, 160, 0.25);
+      box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255,255,255,0.08);
+    }
+
+    .card:hover::before {
+      opacity: 1;
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1rem;
+      margin-top: 0.25rem; /* extra space from icon to top */
+    }
+
+    .card-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      background: transparent; /* transparent icon background */
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      font-weight: 900;
+      color: #fff;
+      flex-shrink: 0;
+      overflow: hidden;
+    }
+    .card-icon img { width: 100%; height: 100%; object-fit: cover; border-radius: inherit; display: block; }
+
+    .card-title-wrapper {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .card-title {
+      font-size: 1.1rem;
+      font-weight: 900;
+      color: #ffffff;
+      letter-spacing: 0.01em;
+      text-shadow: 0 1px 6px rgba(0, 0, 0, 0.4);
+      margin-bottom: 0.25rem;
+      text-overflow: ellipsis;
+      overflow: hidden;
+      white-space: nowrap;
+    }
+
+    .card-author {
+      font-size: 0.82rem;
+      color: #a1a1aa;
+      font-weight: 700;
+      opacity: 0.95;
+      letter-spacing: 0.02em;
+    }
+
+    .card-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.35rem 0.6rem;
+      border-radius: 999px;
+      font-size: 0.7rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border: 1px solid rgba(100, 100, 140, 0.3);
+      background: rgba(30, 30, 46, 0.5);
+      color: #d1d5db;
+    }
+    .badge-key { background: rgba(100, 100, 140, 0.22); color: #d1d5db; border: 1px solid rgba(120, 120, 160, 0.45); }
+
+    .badge-premium {
+      background: linear-gradient(135deg, rgba(234, 179, 8, 0.22), rgba(250, 204, 21, 0.16));
+      color: #fde68a;
+      border: 1px solid rgba(234, 179, 8, 0.5);
+    }
+    .badge-free {
+      background: linear-gradient(135deg, rgba(34, 197, 94, 0.18), rgba(16, 185, 129, 0.14));
+      color: #bbf7d0;
+      border: 1px solid rgba(34, 197, 94, 0.45);
+    }
+
+    /* platform badges use the same grey as Key badge */
+    .badge-platform { background: rgba(100, 100, 140, 0.22); color: #d1d5db; border: 1px solid rgba(120, 120, 160, 0.45); }
+    .badge .plat-ico { width: 14px; height: 14px; display: inline-block; }
+
+    .card-description {
+      color: #d1d5db;
+      font-size: 0.9rem;
+      line-height: 1.6;
+      margin-bottom: 1rem;
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .card-stats {
+      display: flex;
+      gap: 1.5rem;
+      padding: 1rem 0;
+      border-top: 1px solid rgba(100, 100, 140, 0.2);
+      border-bottom: 1px solid rgba(100, 100, 140, 0.2);
+      margin-bottom: 1rem;
+    }
+
+    .stat {
+      flex: 1;
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: #ffffff;
+      display: block;
+      letter-spacing: 0.01em;
+    }
+
+    .stat-label {
+      font-size: 0.72rem;
+      color: #cbd5e1;
+      font-weight: 700;
+      opacity: 0.9;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .card-footer {
+      display: flex;
+      gap: 0.75rem;
+      align-items: center;
+      padding: 0 .75rem 0 .25rem;
+      margin-top: 1rem; /* move buttons further down */
+    }
+
+    /* Top-right status dot */
+    .status-dot {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      box-shadow: 0 0 0 3px rgba(0,0,0,0.25);
+    }
+    .status-on { background: #10b981; }
+    .status-off { background: #ef4444; }
+
+    .btn {
+      flex: 0 0 auto; /* do not stretch buttons */
+      padding: 0.6rem 0.9rem;
+      border-radius: 12px;
+      border: 1px solid rgba(100, 100, 140, 0.3);
+      background: rgba(20, 20, 35, 0.3);
+      color: #e5e7eb;
+      font-weight: 800;
+      cursor: default;
+      transition: all 0.3s ease;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+
+    /* Badge hover to match script cards */
+    .badge:hover { transform: translateY(-3px) scale(1.05); filter: brightness(1.15); border-radius: 999px; }
+
+    .btn-primary {
+      background: transparent;
+      border-color: rgba(120, 120, 160, 0.35); /* grey like Discord when idle */
+      color: #ffffff;
+      flex: 0 0 auto;
+    }
+
+    .btn-primary:hover {
+      background: linear-gradient(135deg, #a855f7, #9333ea);
+      color: #fff;
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(168, 85, 247, 0.4);
+    }
+
+    /* Smaller icon-only primary button; keep Discord same size via .btn-secondary */
+    .btn-icon { width: 42px; padding: 0.5rem; flex: 0 0 42px; justify-content: center; }
+
+    .btn-secondary {
+      background: transparent;
+      border-color: rgba(120, 120, 160, 0.35);
+      color: #e5e7eb;
+      flex: 0 0 auto;
+    }
+
+    .btn-secondary:hover {
+      border-color: #a855f7;
+      background: rgba(168, 85, 247, 0.1);
+    }
+    .btn-discord { margin-left: auto; margin-right: 14px; }
+
+    .empty-state {
+      text-align: center;
+      padding: 4rem 2rem;
+      color: #9ca3af;
+    }
+
+    .empty-state-icon {
+      font-size: 4rem;
+      margin-bottom: 1rem;
+      opacity: 0.5;
+    }
+
+    .empty-state h3 {
+      font-size: 1.5rem;
+      margin-bottom: 0.5rem;
+      color: #d1d5db;
+    }
+
+    @media (max-width: 768px) {
+      .header h1 {
+        font-size: 2rem;
+      }
+
+      .grid {
+        grid-template-columns: 1fr;
+      }
+
+      .filter-tabs {
+        justify-content: flex-start;
+        overflow-x: auto;
+        flex-wrap: nowrap;
+        padding-bottom: 0.5rem;
+      }
+
+      .filter-tab {
+        white-space: nowrap;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="search-wrapper">
+      <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="11" cy="11" r="8"></circle>
+        <path d="m21 21-4.35-4.35"></path>
+      </svg>
+      <input id="search-input" type="text" placeholder="Search executors..." />
+    </div>
+    <div class="filters-row">
+      <div class="select-wrapper">
+        <select id="platformFilter">
+          <option value="all">All</option>
+          <option value="windows">Windows</option>
+          <option value="android">Android</option>
+          <option value="ios">iOS</option>
+        </select>
+      </div>
+      <div class="select-wrapper">
+        <select id="costFilter">
+          <option value="any">All</option>
+          <option value="free">Free</option>
+          <option value="premium">Paid</option>
+        </select>
+      </div>
+      <div class="select-wrapper">
+        <select id="updateFilter">
+          <option value="any">All</option>
+          <option value="updated">Updated</option>
+          <option value="outdated">Not Updated</option>
+        </select>
+      </div>
+    </div>
+
+    <div id="loading" class="loading">
+      <div class="loading-spinner"></div>
+      <div>Contacting WEAO's API. .</div>
+    </div>
+    <div id="grid" class="grid" style="display: none;"></div>
+    <div id="emptyState" class="empty-state" style="display: none;">
+      <div class="empty-state-icon">🔍</div>
+      <h3>No executors found</h3>
+      <p>Try adjusting your search or filters</p>
+    </div>
+  </div>
+
+  <script>
+    let allExecutors = [];
+    let searchTerm = '';
+
+    // Auto-resize to fit host container
+    function postHeight() {
+      try {
+        const h = Math.max(
+          document.body.scrollHeight,
+          document.documentElement.scrollHeight
+        );
+        parent && parent.postMessage({ type: 'softwareHeight', height: h }, '*');
+      } catch (_) {}
+    }
+
+    // Debounced resize
+    let _rh;
+    window.addEventListener('resize', () => {
+      clearTimeout(_rh);
+      _rh = setTimeout(postHeight, 100);
+    });
+
+    // Observe DOM changes to keep host height in sync (fixes missing scrollbar after filter/search)
+    (function initHeightObserver(){
+      const debounced = (() => { let t; return () => { clearTimeout(t); t = setTimeout(postHeight, 60); }; })();
+      const targets = ['grid','loading','emptyState'];
+      const observer = new MutationObserver(debounced);
+      targets.forEach(id => { const el = document.getElementById(id); if (el) observer.observe(el, { childList: true, subtree: true, attributes: true }); });
+      // Fallback: observe body if elements are not yet present
+      if (!document.getElementById('grid')) observer.observe(document.body, { childList: true, subtree: true });
+    })();
+
+    const BASE_EXPLOITS_API = 'https://weao.gg/api/status/exploits';
+
+    async function fetchExecutors() {
+      try {
+        const res = await fetch(BASE_EXPLOITS_API, {
+          headers: { 'Accept': 'application/json' }
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+
+        if (Array.isArray(data)) {
+          allExecutors = data;
+        } else if (Array.isArray(data?.exploits)) {
+          allExecutors = data.exploits;
+        } else if (typeof data === 'object' && data) {
+          allExecutors = Object.values(data).filter(v => v && typeof v === 'object' && v.title);
+        }
+
+        if (!allExecutors.length) {
+          throw new Error('No executors returned from API');
+        }
+
+        console.log('✅ Loaded', allExecutors.length, 'executors');
+        renderExecutors();
+        postHeight();
+      } catch (error) {
+        console.error('Failed to fetch executors:', error);
+        document.getElementById('loading').innerHTML = `
+          <div style="color: #ef4444; font-size: 1.2rem; margin-bottom: 1rem;">⚠️ Unable to Load Data</div>
+          <div style="font-size: 0.9rem; color: #9ca3af;">
+            The API is currently unavailable. Please try again later.
+          </div>
+        `;
+        postHeight();
+      }
+    }
+
+    function filterExecutors() {
+      let filtered = allExecutors;
+
+      if (searchTerm) {
+        filtered = filtered.filter(exec => {
+          const title = (exec.title || '').toLowerCase();
+          const author = (exec.slug?.author || '').toLowerCase();
+          const search = searchTerm.toLowerCase();
+          return title.includes(search) || author.includes(search);
+        });
+      }
+
+      const pf = (document.getElementById('platformFilter')?.value || 'all').toLowerCase();
+      const cf = (document.getElementById('costFilter')?.value || 'any').toLowerCase();
+      const uf = (document.getElementById('updateFilter')?.value || 'any').toLowerCase();
+
+      filtered = filtered.filter(exec => {
+        if (pf !== 'all' && (exec.platform || '').toLowerCase() !== pf) return false;
+        if (cf === 'free' && exec.free !== true) return false;
+        if (cf === 'premium' && exec.free !== false) return false;
+        if (uf === 'updated' && exec.updateStatus !== true) return false;
+        if (uf === 'outdated' && exec.updateStatus !== false) return false;
+        return true;
+      });
+
+      return filtered;
+    }
+
+    function renderExecutors() {
+      const loading = document.getElementById('loading');
+      const grid = document.getElementById('grid');
+      const emptyState = document.getElementById('emptyState');
+
+      loading.style.display = 'none';
+      
+      const filtered = filterExecutors();
+
+      if (filtered.length === 0) {
+        grid.style.display = 'none';
+        emptyState.style.display = 'block';
+        return;
+      }
+
+      emptyState.style.display = 'none';
+      grid.style.display = 'grid';
+      grid.innerHTML = '';
+
+      filtered.forEach(executor => {
+        const card = createExecutorCard(executor);
+        grid.appendChild(card);
+      });
+
+      // Notify host after render
+      setTimeout(postHeight, 50);
+      // Also re-post height when images finish loading
+      grid.querySelectorAll('img').forEach(img => {
+        if (img.complete) return; // already loaded
+        img.addEventListener('load', () => setTimeout(postHeight, 10), { once: true });
+        img.addEventListener('error', () => setTimeout(postHeight, 10), { once: true });
+      });
+      // Re-emit height a few times to settle layout
+      [150, 300, 600].forEach(ms => setTimeout(postHeight, ms));
+    }
+
+    function createExecutorCard(exec) {
+      const card = document.createElement('div');
+      card.className = 'card';
+
+      const initial = (exec.title || 'E').charAt(0).toUpperCase();
+      const description = exec.slug?.fullDescription || exec.slug?.description || 'No description available.';
+      const websiteLink = exec.websitelink || exec.website || exec.slug?.website || '';
+      let iconUrl = '';
+      try {
+        if (websiteLink) {
+          const u = new URL(websiteLink.startsWith('http') ? websiteLink : `https://${websiteLink}`);
+          iconUrl = `https://www.google.com/s2/favicons?sz=64&domain=${u.hostname}`;
+        }
+      } catch (_) {}
+      const iconHTML = iconUrl
+        ? `<img src="${iconUrl}" alt="" onerror="this.style.display='none'" />`
+        : initial;
+      
+      // Build badges with FREE/Premium first
+      const badges = [];
+      const costStr = exec.cost || exec.price || exec.slug?.cost || exec.slug?.price || '';
+      if (exec.free === false) {
+        const paidTitle = costStr ? ` title=\"${String(costStr)}\"` : '';
+        badges.push(`<span class=\"badge badge-premium\"${paidTitle}>Paid</span>`);
+      } else if (exec.free === true) {
+        badges.push('<span class="badge badge-free">Free</span>');
+      }
+      // Key System badge right after cost badge
+      const hasKeySystem = exec.keysystem === true || exec.keySystem === true || exec.requiresKey === true || exec.slug?.keysystem === true || exec.slug?.keySystem === true;
+      if (hasKeySystem) {
+        badges.push('<span class="badge badge-key" title="Key System">🔑</span>');
+      }
+      // Platform with icons after
+      if (exec.platform) {
+        const pf = String(exec.platform).toLowerCase();
+        let ico = '';
+        if (pf.includes('windows')) {
+          ico = '<svg class="plat-ico" viewBox="0 0 24 24" fill="currentColor"><path d="M3 5.5l8-1.2V11H3V5.5zm0 13V13h8v6.7l-8-1.2zM13 4l8-1v8h-8V4zm0 16v-8h8v8l-8-1z"/></svg>';
+          // Windows: icon only
+          badges.push(`<span class=\"badge badge-platform\" title=\"Windows\">${ico}</span>`);
+        } else if (pf.includes('android')) {
+          ico = '<svg class="plat-ico" viewBox="0 0 24 24" fill="currentColor"><path d="M17.6 9l1.4-2.4-.9-.5-1.4 2.4a6.9 6.9 0 0 0-7.5 0L7.8 6.1l-.9.5L8.3 9A5.5 5.5 0 0 0 7 12v5a1 1 0 0 0 1 1h1v3h2v-3h2v3h2v-3h1a1 1 0 0 0 1-1v-5c0-1.2-.5-2.3-1.4-3zM6 10H4v6h2v-6zm14 0h-2v6h2v-6z"/></svg>';
+          // Android: icon only with tooltip
+          badges.push(`<span class=\"badge badge-platform\" title=\"Android\">${ico}</span>`);
+        } else if (pf.includes('ios') || pf.includes('apple') || pf.includes('mac')) {
+          ico = '<svg class="plat-ico" viewBox="0 0 24 24" fill="currentColor"><path d="M16.36 1.64a4.08 4.08 0 0 1-1.14 2.9A3.72 3.72 0 0 1 12.6 6a3.9 3.9 0 0 1 1.13-2.86A4.3 4.3 0 0 1 16.36 1.64zM20.5 17.68c-.36.85-.8 1.63-1.31 2.34-.69.97-1.25 1.64-1.69 2a3.64 3.64 0 0 1-2.22.85c-.55 0-1.21-.16-1.97-.49-.76-.33-1.46-.49-2.1-.49-.67 0-1.39.16-2.17.49-.77.33-1.4.5-1.89.5-.79.04-1.56-.27-2.3-.94-.49-.43-1.07-1.1-1.75-2.01A12.6 12.6 0 0 1 2 13.9c0-1.64.36-3.06 1.07-4.25a6.2 6.2 0 0 1 2.22-2.3 5.86 5.86 0 0 1 3.01-.87c.59 0 1.36.18 2.31.53.95.36 1.56.53 1.83.53.2 0 .83-.21 1.9-.62.99-.36 1.83-.5 2.54-.44 1.88.15 3.29.91 4.23 2.27-1.68 1.02-2.52 2.46-2.52 4.3 0 1.43.54 2.62 1.6 3.56-.13.36-.27.7-.42 1.01z"/></svg>';
+          // iOS: icon only
+          badges.push(`<span class=\"badge badge-platform\" title=\"iOS\">${ico}</span>`);
+        } else {
+          // Fallback: show raw platform text
+          badges.push(`<span class=\"badge badge-platform\">${exec.platform}</span>`);
+        }
+      }
+
+      const version = exec.version || exec.slug?.version || 'N/A';
+      const suncPercentage = exec.suncPercentage || exec.SUNCPercentage || exec.slug?.suncPercentage || 0;
+      const uncPercentage = exec.uncPercentage || exec.UNCPercentage || exec.slug?.uncPercentage || 0;
+      // If API provides detected boolean, show True/False for SUNC, else fallback to %/n.a
+      const detected = (typeof exec.detected === 'boolean') ? exec.detected
+        : (typeof exec.slug?.detected === 'boolean') ? exec.slug.detected
+        : undefined;
+      const suncDisplay = (typeof detected === 'boolean')
+        ? (detected ? 'True' : 'False')
+        : ((typeof suncPercentage === 'number' && suncPercentage > 0) ? `${suncPercentage}%` : 'n/a');
+      const uncDisplay = (typeof uncPercentage === 'number' && uncPercentage > 0) ? `${uncPercentage}%` : 'n/a';
+
+      const websiteLinkFinal = websiteLink || '#';
+      const discordLink = exec.discordlink || exec.discord || null;
+
+      const statusClass = exec.updateStatus === true ? 'status-on' : 'status-off';
+      const updatedTip = exec.updatedDate ? `Updated: ${exec.updatedDate}` : (exec.updateStatus === true ? 'Updated' : 'Not updated');
+      const authorName = exec.slug?.author || exec.author || '';
+      card.innerHTML = `
+        <div class="status-dot ${statusClass}" title="${updatedTip}"></div>
+        <div class="card-header">
+          <div class="card-icon">${iconHTML}</div>
+          <div class="card-title-wrapper">
+            <div class="card-title">${exec.title || 'Unknown'}</div>
+            ${authorName ? `<div class="card-author">by ${authorName}</div>` : ''}
+          </div>
+        </div>
+
+        <div class="card-badges">
+          ${badges.join('')}
+        </div>
+
+        <div class="card-stats">
+          <div class="stat">
+            <span class="stat-value">${version}</span>
+            <span class="stat-label">Version</span>
+          </div>
+          <div class="stat">
+            <span class="stat-value">${suncDisplay}</span>
+            <span class="stat-label">Detected</span>
+          </div>
+          <div class="stat">
+            <span class="stat-value">${uncDisplay}</span>
+            <span class="stat-label">UNC</span>
+          </div>
+        </div>
+
+        <div class="card-footer">
+          <a href="${websiteLinkFinal}" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-icon" onclick="event.stopPropagation()" title="Open website">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+          </a>
+          ${discordLink ? `
+            <a href="${discordLink}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-icon" onclick="event.stopPropagation()" title="Open Discord">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515a.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0a12.64 12.64 0 0 0-.617-1.25a.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057a19.9 19.9 0 0 0 5.993 3.03a.078.078 0 0 0 .084-.028a14.09 14.09 0 0 0 1.226-1.994a.076.076 0 0 0-.041-.106a13.107 13.107 0 0 1-1.872-.892a.077.077 0 0 1-.008-.128a10.2 10.2 0 0 0 .372-.292a.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127a12.299 12.299 0 0 1-1.873.892a.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028a19.839 19.839 0 0 0 6.002-3.03a.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419c0-1.333.956-2.419 2.157-2.419c1.21 0 2.176 1.096 2.157 2.42c0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419c0-1.333.956-2.419 2.157-2.419c1.21 0 2.176 1.096 2.157 2.42c0 1.333-.956 2.418-2.157 2.418z"/>
+              </svg>
+            </a>
+          ` : ''}
+        </div>
+      `;
+
+      return card;
+    }
+
+    document.getElementById('search-input').addEventListener('input', (e) => {
+      searchTerm = e.target.value;
+      renderExecutors();
+      postHeight();
+    });
+
+    ['platformFilter','costFilter','updateFilter'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener('change', () => { renderExecutors(); postHeight(); });
+    });
+
+    // Modern dropdown: replace a native select with custom trigger+menu
+    function initModernSelect(selectEl) {
+      if (!selectEl || selectEl.dataset.enhanced === '1') return;
+      selectEl.dataset.enhanced = '1';
+      const wrapper = selectEl.closest('.select-wrapper');
+      if (!wrapper) return;
+
+      // Hide native select
+      selectEl.classList.add('select-hidden');
+
+      // Create trigger
+      const trigger = document.createElement('div');
+      trigger.className = 'modern-select-trigger';
+      const label = document.createElement('span');
+      label.textContent = selectEl.options[selectEl.selectedIndex]?.text || '';
+      const caret = document.createElement('span');
+      caret.className = 'modern-caret';
+      trigger.appendChild(label);
+      trigger.appendChild(caret);
+
+      // Create menu
+      const menu = document.createElement('div');
+      menu.className = 'modern-select-menu';
+      Array.from(selectEl.options).forEach((opt, idx) => {
+        const item = document.createElement('div');
+        item.className = 'modern-option';
+        item.setAttribute('role', 'option');
+        item.dataset.value = opt.value;
+        item.textContent = opt.text;
+        if (idx === selectEl.selectedIndex) item.classList.add('active');
+        item.addEventListener('click', (e) => {
+          e.stopPropagation();
+          selectEl.value = opt.value;
+          label.textContent = opt.text;
+          menu.querySelectorAll('.modern-option').forEach(o => o.classList.remove('active'));
+          item.classList.add('active');
+          selectEl.dispatchEvent(new Event('change'));
+          menu.classList.remove('open');
+        });
+        menu.appendChild(item);
+      });
+
+      // Toggle menu
+      trigger.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const opened = document.querySelector('.modern-select-menu.open');
+        if (opened && opened !== menu) opened.classList.remove('open');
+        menu.classList.toggle('open');
+      });
+
+      // Close on outside click / ESC
+      document.addEventListener('click', (e) => {
+        if (!wrapper.contains(e.target)) menu.classList.remove('open');
+      });
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') menu.classList.remove('open');
+      });
+
+      // Sync if value changes programmatically
+      selectEl.addEventListener('change', () => {
+        const opt = selectEl.options[selectEl.selectedIndex];
+        label.textContent = opt?.text || '';
+        menu.querySelectorAll('.modern-option').forEach(o => o.classList.toggle('active', o.dataset.value === selectEl.value));
+      });
+
+      // Mount
+      wrapper.appendChild(trigger);
+      wrapper.appendChild(menu);
+    }
+
+    // Enhance all filters with modern dropdowns
+    ['platformFilter','costFilter','updateFilter'].forEach(id => initModernSelect(document.getElementById(id)));
+
+    // Disable copy & context menu
+    document.addEventListener('copy', e => e.preventDefault());
+    document.addEventListener('contextmenu', e => e.preventDefault());
+    document.addEventListener('selectstart', e => e.preventDefault());
+
+    // Initial post to size container quickly
+    postHeight();
+    fetchExecutors();
+  </script>
+</body>
+</html>

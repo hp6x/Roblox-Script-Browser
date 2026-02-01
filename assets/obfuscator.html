@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lua Obfuscator</title>
+  <link rel="stylesheet" href="obf-styles.css" />
+</head>
+<body>
+  <div class="obfuscator-container">
+    <div class="header">
+    </div>
+
+    <div class="controls-section">
+      <div class="obfuscator-select">
+        <div class="obf-option active" data-method="prometheus">
+          <div class="obf-option-title">Prometheus</div>
+          <div class="obf-option-desc">Recomended</div>
+        </div>
+        <div class="obf-option" data-method="Eclipse">
+          <div class="obf-option-title">Eclipse</div>
+          <div class="obf-option-desc">by hp6x | down</div>
+        </div>
+        <div class="obf-option" data-method="Hercules">
+          <div class="obf-option-title">Hercules</div>
+        </div>
+        <div class="obf-option" data-method="PY44">
+          <div class="obf-option-title">PY44</div>
+        </div>
+      </div>
+
+      <div class="action-buttons">
+        <button class="btn btn-primary" id="obfuscate-btn">
+          <span>Obfuscate Script</span>
+        </button>
+        <button class="btn btn-secondary" id="clear-btn">
+          <span>CLEAR ALL</span>
+        </button>
+      </div>
+
+      <div class="status-message" id="status-message"></div>
+    </div>
+
+    <div class="obfuscator-grid">
+      <div class="editor-panel">
+        <div class="panel-header">
+          <div class="panel-title">
+            <span>Input</span>
+          </div>
+          <div class="header-right">
+            <div class="char-count" id="input-count">0 characters</div>
+            <button class="icon-btn" id="upload-input-btn" title="Upload file" aria-label="Upload input">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 16V4m0 0l-4 4m4-4l4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M20 16v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            </button>
+          </div>
+        </div>
+        <textarea 
+          id="input-script" 
+          placeholder="-- paste you shitty script here!"
+        ></textarea>
+        <input type="file" id="upload-input-file" accept=".lua" style="display:none" />
+      </div>
+
+      <div class="editor-panel">
+        <div class="panel-header">
+          <div class="panel-title">
+            <span>Output</span>
+          </div>
+          <div class="header-right">
+            <div class="char-count" id="output-count">0 characters</div>
+            <button class="icon-btn" id="copy-output-icon-btn" title="Copy output" aria-label="Copy output">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="9" y="9" width="11" height="11" rx="2" stroke="currentColor" stroke-width="2"/><rect x="4" y="4" width="11" height="11" rx="2" stroke="currentColor" stroke-width="2"/></svg>
+            </button>
+            <button class="icon-btn" id="open-output-btn" title="Open output in new tab" aria-label="Open output in new tab">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M14 3h7v7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 14L21 3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <button class="icon-btn" id="download-output-btn" title="Download output" aria-label="Download output">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 8v12m0 0l-4-4m4 4l4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M20 8V6a2 2 0 00-2-2H6a2 2 0 00-2 2v2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            </button>
+          </div>
+        </div>
+        <textarea 
+          id="output-script" 
+          placeholder=""
+          readonly
+        ></textarea>
+      </div>
+    </div>
+  </div>
+
+  <script src="obf-script.js"></script>
+</body>
+</html>
